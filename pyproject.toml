@@ -1,0 +1,23 @@
+[project]
+name = "simsim-tools-server"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "FernandoYu",email = "fyu@fi.uba.ar"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi (>=0.123.9,<0.124.0)",
+    "uvicorn (>=0.38.0,<0.39.0)",
+    "pillow (>=12.0.0,<13.0.0)",
+    "pytesseract (>=0.3.13,<0.4.0)"
+]
+
+[tool.poetry]
+packages = [{include = "simsim_tools_server", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
