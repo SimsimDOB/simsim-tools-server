@@ -21,7 +21,9 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
                 summonses_str = __get_summonses_str(img)
 
                 # PATTERNS = ["1 summons", "1. summons", "1. summonses", "1 summonses"]
-                if re.search(r'1.*summons', summonses_str) or re.search(r'[0-9].*summons[^es]', summonses_str):
+                if re.search(r"1.*summons", summonses_str) or re.search(
+                    r"[0-9].*summons[^es]", summonses_str
+                ):
                     count += 1
                 else:
                     removed += 1
@@ -38,7 +40,7 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
                     images_index += skip_pages + 1
                 else:
                     summonses_str = __get_summonses_str(img)
-                    while not re.search(r'[0-9].*summons', summonses_str):
+                    while not re.search(r"[0-9].*summons", summonses_str):
                         images_index += 1
                         if images_index >= len(pdf):
                             break
@@ -46,7 +48,7 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
                         summonses_str = __get_summonses_str(img)
 
             total_count += count
-            pages_str = ', '.join(map(str, pages))
+            pages_str = ", ".join(map(str, pages))
 
         return total_count, removed, pages_str
     except Exception as error:
@@ -62,7 +64,7 @@ def __page_to_image(page: fitz.Page) -> Image.Image:
 
 def __get_summonses_str(img: Image.Image) -> str:
     cropped_img = __crop_summonses(img)
-    summonses_str = pytesseract.image_to_string(cropped_img, lang='eng').lower()
+    summonses_str = pytesseract.image_to_string(cropped_img, lang="eng").lower()
     return summonses_str
 
 
@@ -86,12 +88,11 @@ def __crop_pages(img: Image.Image) -> Image.Image:
 
 def __get_skip_pages(img: Image.Image) -> int | None:
     pages_img = __crop_pages(img)
-    pages_str = pytesseract.image_to_string(pages_img, lang='eng').lower()
-    pages = re.search(r'[0-9].*of.*[0-9]', pages_str)
+    pages_str = pytesseract.image_to_string(pages_img, lang="eng").lower()
+    pages = re.search(r"[0-9].*of.*[0-9]", pages_str)
     if pages:
         cur_page, total_page = pages.group().split(" of ")
-        cur_page = re.sub(r'[^0-9]', '', cur_page)
-        total_page = re.sub(r'[^0-9]', '', total_page)
-        return (int(total_page) - int(cur_page))
+        cur_page = re.sub(r"[^0-9]", "", cur_page)
+        total_page = re.sub(r"[^0-9]", "", total_page)
+        return int(total_page) - int(cur_page)
     return None
-

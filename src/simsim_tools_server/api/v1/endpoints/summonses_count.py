@@ -6,7 +6,7 @@ from simsim_tools_server.services.summonses_count_service import count_summonses
 router = APIRouter()
 
 
-@router.post("/summonses-count")
+@router.post("/v1/summonses-count")
 async def summonses_count(pdfs: List[UploadFile] = File(...)):
     try:
         # count = len(pdfs)
@@ -19,7 +19,14 @@ async def summonses_count(pdfs: List[UploadFile] = File(...)):
             pdf_bytes = await pdf.read()
             count, removed, pages_str = count_summonses(pdf_bytes)
             total_count += count
-            details.append({"filename": pdf.filename, "count": count, "removed": removed, "pages": pages_str})
+            details.append(
+                {
+                    "filename": pdf.filename,
+                    "count": count,
+                    "removed": removed,
+                    "pages": pages_str,
+                }
+            )
         return {"total_count": total_count, "details": details}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
