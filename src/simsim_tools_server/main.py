@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from .api.router import api_router
 
 
@@ -10,6 +11,12 @@ load_dotenv(".env.production" if env == "production" else ".env")
 
 app = FastAPI()
 app.include_router(api_router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def main():

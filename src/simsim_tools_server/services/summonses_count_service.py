@@ -2,6 +2,8 @@ import fitz
 from PIL import Image
 import pytesseract
 import re
+import traceback
+from io import BytesIO
 
 
 def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
@@ -52,14 +54,14 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
 
         return total_count, removed, pages_str
     except Exception as error:
+        traceback.print_exc()
         raise error
 
 
 def __page_to_image(page: fitz.Page) -> Image.Image:
     pix = page.get_pixmap(dpi=150)
     png_bytes = pix.tobytes("png")
-    img = Image.frombytes("RGB", (pix.width, pix.height), png_bytes)
-    return img
+    return Image.open(BytesIO(png_bytes))
 
 
 def __get_summonses_str(img: Image.Image) -> str:
