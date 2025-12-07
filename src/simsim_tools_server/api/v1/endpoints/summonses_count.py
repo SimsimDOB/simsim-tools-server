@@ -23,8 +23,8 @@ async def summonses_count(pdfs: List[UploadFile] = File(...)):
                 {
                     "filename": pdf.filename,
                     "count": count,
-                    "removed": removed,
-                    "pages": pages_str,
+                    "removed_count": removed,
+                    "removed_pages": pages_str,
                 }
             )
         return {"total_count": total_count, "details": details}
