@@ -4,6 +4,7 @@ import pytesseract
 import re
 import traceback
 from io import BytesIO
+import logging
 
 
 def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
@@ -15,7 +16,7 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
             count = 0
             removed = 0
             pages = []
-            print(f"Pdf length: {len(pdf)}")
+            logging.info(f"Pdf length: {len(pdf)}")
 
             images_index = 0
             while images_index < len(pdf):
@@ -54,7 +55,7 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
 
         return total_count, removed, pages_str
     except Exception as error:
-        traceback.print_exc()
+        logging.error(traceback.format_exc())
         raise error
 
 
