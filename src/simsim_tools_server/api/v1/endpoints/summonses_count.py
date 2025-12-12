@@ -6,7 +6,7 @@ from simsim_tools_server.services.summonses_count_service import count_summonses
 router = APIRouter()
 
 
-@router.post("/v1/summonses-count")
+@router.post("/summonses-count")
 async def summonses_count(pdfs: List[UploadFile] = File(...)):
     try:
         # count = len(pdfs)
