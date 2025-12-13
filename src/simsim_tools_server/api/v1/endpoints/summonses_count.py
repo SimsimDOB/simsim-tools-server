@@ -9,9 +9,6 @@ router = APIRouter()
 @router.post("/summonses-count")
 async def summonses_count(pdfs: List[UploadFile] = File(...)):
     try:
-        # count = len(pdfs)
-        # return {"summonses_count": count}
-
         total_count = 0
         details = []
 
@@ -35,6 +32,7 @@ async def summonses_count(pdfs: List[UploadFile] = File(...)):
                         "error": str(error),
                     }
                 )
+
         return {"total_count": total_count, "details": details}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
