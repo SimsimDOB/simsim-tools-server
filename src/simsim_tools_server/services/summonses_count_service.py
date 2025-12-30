@@ -5,38 +5,42 @@ import re
 import traceback
 from io import BytesIO
 import logging
+from fastapi import UploadFile
 
 
-def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
+def count_summonses(pdf: UploadFile) -> tuple[int, int, str]:
     try:
         total_count = 0
         pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as pdf:
+        with fitz.open(stream=pdf.file.read(), filetype="pdf") as pdf_document:
+            logging.info(f"Processing file: {pdf.filename}")
+            logging.info(f"Pdf length: {len(pdf_document)}")
             count = 0
             removed = 0
             pages = []
-            logging.info(f"Pdf length: {len(pdf)}")
 
             images_index = 0
-            while images_index < len(pdf):
-                img = __page_to_image(pdf.load_page(images_index))
+            while images_index < len(pdf_document):
+                img = __page_to_image(pdf_document.load_page(images_index))
                 summonses_str = __get_summonses_str(img)
 
                 # PATTERNS = ["1 summons", "1. summons", "1. summonses", "1 summonses"]
                 if re.search(r"1.*summons", summonses_str) or re.search(
                     r"[0-9].*summons[^es]", summonses_str
                 ):
+                    logging.info(f"Found summons on page {images_index + 1}")
                     count += 1
                 else:
-                    removed += 1
+                    logging.info(f"Removing page {images_index + 1}")
                     pages.append(images_index + 1)
+                    removed += 1
                 images_index += 1
 
-                if images_index >= len(pdf):
+                if images_index >= len(pdf_document):
                     break
 
-                img = __page_to_image(pdf.load_page(images_index))
+                img = __page_to_image(pdf_document.load_page(images_index))
                 skip_pages = __get_skip_pages(img)
 
                 if skip_pages is not None:
@@ -45,16 +49,20 @@ def count_summonses(pdf_bytes: bytes) -> tuple[int, int, str]:
                     summonses_str = __get_summonses_str(img)
                     while not re.search(r"[0-9].*summons", summonses_str):
                         images_index += 1
-                        if images_index >= len(pdf):
+                        if images_index >= len(pdf_document):
                             break
-                        img = __page_to_image(pdf.load_page(images_index))
+                        img = __page_to_image(pdf_document.load_page(images_index))
                         summonses_str = __get_summonses_str(img)
 
+            logging.info(
+                f"File {pdf.filename} - Count: {count}, Removed: {removed}, Pages: {pages}"
+            )
             total_count += count
             pages_str = ", ".join(map(str, pages))
 
         return total_count, removed, pages_str
     except Exception as error:
+        logging.error(f"Error counting summonses: {error}")
         logging.error(traceback.format_exc())
         raise error
 

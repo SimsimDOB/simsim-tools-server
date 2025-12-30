@@ -3,25 +3,25 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api.router import api_router
-
-
-env = os.getenv("ENV", "development")
-load_dotenv(".env.production" if env == "production" else ".env")
-
-
-app = FastAPI()
-app.include_router(api_router)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    # allow_origins=["http://localhost:5173", "https://simsimdob.github.io"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from .core.logging import setup_logging
+import uvicorn
 
 
 def main():
-    import uvicorn
+    env = os.getenv("ENV", "development")
+    load_dotenv(".env.production" if env == "production" else ".env")
+
+    setup_logging()
+
+    app = FastAPI()
+    app.include_router(api_router)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        # allow_origins=["http://localhost:5173", "https://simsimdob.github.io"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     if env == "production":
         uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10827)))
