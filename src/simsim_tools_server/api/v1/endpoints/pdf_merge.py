@@ -13,7 +13,7 @@ async def pdf_merge(files: list[UploadFile] = File(...)):
     try:
         merged_pdf_bytes = await merge_pdfs(files)
 
-        with NamedTemporaryFile(delete=True, suffix=".pdf") as temp_file:
+        with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
             temp_file.write(merged_pdf_bytes.getvalue())
             temp_file.flush()
             temp_file.seek(0)
