@@ -21,7 +21,7 @@ async def pdf_merge(files: list[UploadFile] = File(...)):
             temp_name = Path(temp_path).stem
             logging.info(f"Merged PDF saved temporarily at: {temp_path}")
 
-        return {"merged_pdf": temp_name}
+        return {"filename": temp_name}
     except Exception as e:
         logging.error(f"Failed to merge PDFs: {e}")
         raise HTTPException(
