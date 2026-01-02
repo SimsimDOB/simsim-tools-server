@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, File, UploadFile, status
-from fastapi.responses import FileResponse, StreamingResponse
 from tempfile import NamedTemporaryFile
 import logging
 from pathlib import Path
@@ -14,11 +13,15 @@ async def pdf_merge(files: list[UploadFile] = File(...)):
     try:
         merged_pdf_bytes = await merge_pdfs(files)
 
-        return StreamingResponse(
-            merged_pdf_bytes,
-            media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="merged.pdf"'},
-        )
+        with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(merged_pdf_bytes.getvalue())
+            temp_file.flush()
+            temp_file.seek(0)
+            temp_path = temp_file.name
+            temp_name = Path(temp_path).stem
+            logging.info(f"Merged PDF saved temporarily at: {temp_path}")
+
+        return {"filename": temp_name}
     except Exception as e:
         logging.error(f"Failed to merge PDFs: {e}")
         raise HTTPException(
