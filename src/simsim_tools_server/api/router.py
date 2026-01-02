@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from .v1.endpoints import summonses_count, pdf_merge
+from .v1.endpoints import summonses_count, pdf_merge, download
 
 
 api_router = APIRouter(prefix="/api/v1")
