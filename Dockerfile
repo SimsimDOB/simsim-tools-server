@@ -4,6 +4,7 @@ FROM python:3.13-slim
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     libtesseract-dev \
+    libheif-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
