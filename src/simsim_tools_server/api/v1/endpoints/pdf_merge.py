@@ -5,6 +5,7 @@ from pathlib import Path
 
 from simsim_tools_server.services.pdf_merge_service import merge_pdfs
 
+
 router = APIRouter()
 
 
