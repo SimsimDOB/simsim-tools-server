@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api.router import api_router
+from .api.router import api_router, api_v1_router
 from .core.logging import setup_logging
 import uvicorn
 
@@ -14,6 +14,7 @@ setup_logging()
 
 app = FastAPI()
 app.include_router(api_router)
+app.include_router(api_v1_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
