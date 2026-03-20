@@ -22,11 +22,11 @@ class AllowedExtension(str, Enum):
 
 
 async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
-    def resize_image(image: Image.Image) -> Image.Image:
-        if len(file_bytes) > MAX_IMAGE_SIZE:
+    def resize_image(image: Image.Image, image_size: int) -> Image.Image:
+        if image_size > MAX_IMAGE_SIZE:
             logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
             logging.debug(
-                f"Original image dimensions: {image.width}x{image.height}, size: {len(file_bytes)} bytes"
+                f"Original image dimensions: {image.width}x{image.height}, size: {image_size} bytes"
             )
 
             new_width = image.width * RESIZE_PERCENTAGE // 100
@@ -59,7 +59,7 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
 
         image = Image.open(BytesIO(file_bytes)).convert("RGB")
 
-        image = resize_image(image)
+        image = resize_image(image, len(file_bytes))
         image = ImageOps.exif_transpose(image)
 
         insert_image_to_pdf(image, merged_pdf)
