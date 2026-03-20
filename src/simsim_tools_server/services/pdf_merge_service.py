@@ -54,18 +54,22 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
                 image = Image.open(BytesIO(file_bytes)).convert("RGB")
 
                 if len(file_bytes) > MAX_IMAGE_SIZE:
+                    logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
+                    logging.debug(f"Original image dimensions: {image.width}x{image.height}, size: {len(file_bytes)} bytes")
+
                     new_width = image.width * RESIZE_PERCENTAGE // 100
                     new_height = image.height * RESIZE_PERCENTAGE // 100
                     image = image.resize((new_width, new_height))
 
                 buffer = BytesIO()
-                image.save(buffer, format="PNG")
+                image.save(buffer, format="JPEG", quality=85, optimize=True)
                 image_bytes = buffer.getvalue()
                 rect = fitz.Rect(0, 0, image.width, image.height)
 
                 image.close()
 
                 logging.info("Inserting image as PDF page.")
+                logging.debug(f"Image dimensions: {image.width}x{image.height}, size: {len(image_bytes)} bytes")
                 page = merged_pdf.new_page(width=rect.width, height=rect.height)
                 page.insert_image(rect, stream=image_bytes)
 
