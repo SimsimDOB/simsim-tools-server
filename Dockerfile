@@ -19,7 +19,7 @@ COPY pyproject.toml poetry.lock* ./
 
 # Install dependencies (no venv — Render prefers system Python)
 RUN poetry config virtualenvs.create false
-RUN poetry install --no-interaction --no-root
+RUN poetry install --no-interaction --no-root --without dev
 
 # Copy the actual app code
 COPY src ./src
