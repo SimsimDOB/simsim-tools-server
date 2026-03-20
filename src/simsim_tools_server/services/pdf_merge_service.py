@@ -60,6 +60,7 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
         image = Image.open(BytesIO(file_bytes)).convert("RGB")
 
         image = resize_image(image)
+        image = ImageOps.exif_transpose(image)
 
         insert_image_to_pdf(image, merged_pdf)
 
