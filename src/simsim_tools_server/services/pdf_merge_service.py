@@ -21,66 +21,72 @@ class AllowedExtension(str, Enum):
     HEIF = "heif"
 
 
-async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
-    def resize_image(image: Image.Image, image_size: int) -> Image.Image:
-        if image_size > MAX_IMAGE_SIZE:
-            logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
-            logging.debug(
-                f"Original image dimensions: {image.width}x{image.height}, size: {image_size} bytes"
-            )
-
-            new_width = image.width * RESIZE_PERCENTAGE // 100
-            new_height = image.height * RESIZE_PERCENTAGE // 100
-            image = image.resize((new_width, new_height))
-
-        return image
-
-    def save_image_bytes(image: Image.Image) -> bytes:
-        buffer = BytesIO()
-        image.save(buffer, format="JPEG", quality=85, optimize=True)
-        return buffer.getvalue()
-
-    def insert_image_to_pdf(image: Image.Image, merged_pdf: fitz.Document) -> None:
-        image_bytes = save_image_bytes(image)
-        rect = fitz.Rect(0, 0, image.width, image.height)
-
-        logging.info("Inserting image as PDF page.")
+def _resize_image(image: Image.Image, image_size: int) -> Image.Image:
+    if image_size > MAX_IMAGE_SIZE:
+        logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
         logging.debug(
-            f"Image dimensions: {image.width}x{image.height}, size: {len(image_bytes)} bytes"
+            f"Original image dimensions: {image.width}x{image.height}, size: {image_size} bytes"
         )
 
-        page = merged_pdf.new_page(width=rect.width, height=rect.height)
-        page.insert_image(rect, stream=image_bytes)
+        new_width = image.width * RESIZE_PERCENTAGE // 100
+        new_height = image.height * RESIZE_PERCENTAGE // 100
+        image = image.resize((new_width, new_height))
 
-    def merge_image(file_bytes: bytes, merged_pdf: fitz.Document) -> None:
-        pillow_heif.register_heif_opener()
+    return image
 
-        logging.info(f"Merging image file: {file.filename}")
 
-        image = Image.open(BytesIO(file_bytes)).convert("RGB")
+def _save_image_bytes(image: Image.Image) -> bytes:
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=85, optimize=True)
+    return buffer.getvalue()
 
-        image = resize_image(image, len(file_bytes))
-        image = ImageOps.exif_transpose(image)
 
-        insert_image_to_pdf(image, merged_pdf)
+def _insert_image_to_pdf(image: Image.Image, merged_pdf: fitz.Document) -> None:
+    image_bytes = _save_image_bytes(image)
+    rect = fitz.Rect(0, 0, image.width, image.height)
 
-        image.close()
+    logging.info("Inserting image as PDF page.")
+    logging.debug(
+        f"Image dimensions: {image.width}x{image.height}, size: {len(image_bytes)} bytes"
+    )
 
-    def merge_pdf(file_bytes: bytes, merged_pdf: fitz.Document) -> None:
-        logging.info(f"Merging PDF file: {file.filename}")
+    page = merged_pdf.new_page(width=rect.width, height=rect.height)
+    page.insert_image(rect, stream=image_bytes)
 
-        with fitz.open(stream=file_bytes, filetype=ext.value) as src_pdf:
-            logging.info("Inserting PDF pages.")
-            merged_pdf.insert_pdf(src_pdf)
 
-    def save_pdf_bytes(merged_pdf: fitz.Document) -> BytesIO:
-        merged_bytes = BytesIO()
-        merged_pdf.save(merged_bytes)
-        merged_pdf.close()
-        merged_bytes.seek(0)
+def _merge_image(file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document) -> None:
+    pillow_heif.register_heif_opener()
 
-        return merged_bytes
+    logging.info(f"Merging image file: {file_name}")
 
+    image = Image.open(BytesIO(file_bytes)).convert("RGB")
+
+    image = _resize_image(image, len(file_bytes))
+    image = ImageOps.exif_transpose(image)
+
+    _insert_image_to_pdf(image, merged_pdf)
+
+    image.close()
+
+
+def _merge_pdf(file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document) -> None:
+    logging.info(f"Merging PDF file: {file_name}")
+
+    with fitz.open(stream=file_bytes, filetype="pdf") as src_pdf:
+        logging.info("Inserting PDF pages.")
+        merged_pdf.insert_pdf(src_pdf)
+
+
+def _save_pdf_bytes(merged_pdf: fitz.Document) -> BytesIO:
+    merged_bytes = BytesIO()
+    merged_pdf.save(merged_bytes)
+    merged_pdf.close()
+    merged_bytes.seek(0)
+
+    return merged_bytes
+
+
+async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
     try:
         merged_pdf = fitz.open()
 
@@ -100,11 +106,11 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
             file_bytes = await file.read()
 
             if ext == AllowedExtension.PDF:
-                merge_pdf(file_bytes, merged_pdf)
+                _merge_pdf(file_bytes, file.filename, merged_pdf)
             else:
-                merge_image(file_bytes, merged_pdf)
+                _merge_image(file_bytes, file.filename, merged_pdf)
 
-        merged_bytes = save_pdf_bytes(merged_pdf)
+        merged_bytes = _save_pdf_bytes(merged_pdf)
 
         logging.info("PDF merging completed successfully.")
 
