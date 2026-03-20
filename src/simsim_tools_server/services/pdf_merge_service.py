@@ -54,7 +54,9 @@ def _insert_image_to_pdf(image: Image.Image, merged_pdf: fitz.Document) -> None:
     page.insert_image(rect, stream=image_bytes)
 
 
-def _merge_image(file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document) -> None:
+def _merge_image(
+    file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document
+) -> None:
     pillow_heif.register_heif_opener()
 
     logging.info(f"Merging image file: {file_name}")
@@ -69,7 +71,9 @@ def _merge_image(file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Docu
     image.close()
 
 
-def _merge_pdf(file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document) -> None:
+def _merge_pdf(
+    file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document
+) -> None:
     logging.info(f"Merging PDF file: {file_name}")
 
     with fitz.open(stream=file_bytes, filetype="pdf") as src_pdf:
