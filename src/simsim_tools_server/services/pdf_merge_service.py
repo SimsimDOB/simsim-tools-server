@@ -8,6 +8,10 @@ import pillow_heif
 from PIL import Image
 
 
+MAX_IMAGE_SIZE = 1024 * 800  # 800 KB
+RESIZE_PERCENTAGE = 20
+
+
 class AllowedExtension(str, Enum):
     PDF = "pdf"
     JPG = "jpg"
@@ -45,20 +49,20 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
             else:
                 pillow_heif.register_heif_opener()
 
-                if ext in (AllowedExtension.HEIC, AllowedExtension.HEIF):
-                    logging.info(f"Merging HEIC/HEIF image: {file.filename}")
+                logging.info(f"Merging image file: {file.filename}")
 
-                    image = Image.open(BytesIO(file_bytes)).convert("RGB")
-                    buf = BytesIO()
-                    image.save(buf, format="PNG")
-                    image_bytes = buf.getvalue()
-                    rect = fitz.Rect(0, 0, image.width, image.height)
-                else:
-                    logging.info(f"Merging image file: {file.filename}")
+                image = Image.open(BytesIO(file_bytes)).convert("RGB")
 
-                    image = fitz.open(stream=file_bytes, filetype=ext.value)
-                    rect = image[0].rect
-                    image_bytes = file_bytes
+                if len(file_bytes) > MAX_IMAGE_SIZE:
+                    new_width = image.width * RESIZE_PERCENTAGE // 100
+                    new_height = image.height * RESIZE_PERCENTAGE // 100
+                    image = image.resize((new_width, new_height))
+
+                buffer = BytesIO()
+                image.save(buffer, format="PNG")
+                image_bytes = buffer.getvalue()
+                rect = fitz.Rect(0, 0, image.width, image.height)
+
                 image.close()
 
                 logging.info("Inserting image as PDF page.")
