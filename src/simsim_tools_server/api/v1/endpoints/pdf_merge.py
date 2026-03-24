@@ -1,8 +1,6 @@
 from fastapi import APIRouter, HTTPException, File, UploadFile, status
 from fastapi.responses import StreamingResponse
-from tempfile import NamedTemporaryFile
 import logging
-from pathlib import Path
 
 from simsim_tools_server.services.pdf_merge_service import merge_pdfs
 
