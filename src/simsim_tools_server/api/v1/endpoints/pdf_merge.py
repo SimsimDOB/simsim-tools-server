@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile, status
-from fastapi.responses import StreamingResponse
 import logging
 
-from simsim_tools_server.services.pdf_merge_service import merge_pdfs
+from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 
+from simsim_tools_server.services.pdf_merge_service import merge_pdfs
 
 router = APIRouter()
 

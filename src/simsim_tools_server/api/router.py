@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from . import ping
-from .v1.endpoints import summonses_count, pdf_merge
 
+from . import ping
+from .v1.endpoints import pdf_merge, summonses_count
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(ping.router)

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, File, UploadFile
 import logging
 import traceback
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from simsim_tools_server.services.summonses_count_service import count_summonses
 
