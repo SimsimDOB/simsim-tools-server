@@ -4,7 +4,8 @@ run:
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    pr_number=$(gh pr create --base release --head main --title "Deploy" --body "" --json number --jq '.number')
+    gh pr create --base release --head main --title "Deploy" --body ""
+    pr_number=$(gh pr view main --repo SimsimDOB/simsim-tools-server --json number --jq '.number')
     gh pr merge "$pr_number" --merge
 
 merge:
