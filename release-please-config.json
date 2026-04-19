@@ -1,4 +1,5 @@
 {
+  "target-branch": "release",
   "packages": {
     ".": {
       "release-type": "python"
