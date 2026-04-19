@@ -1,13 +1,13 @@
-from fastapi import UploadFile
-from pathlib import Path
-import fitz
 import logging
 import zipfile
 from enum import Enum
 from io import BytesIO
-import pillow_heif
-from PIL import Image, ImageOps
+from pathlib import Path
 
+import fitz
+import pillow_heif
+from fastapi import UploadFile
+from PIL import Image, ImageOps
 
 MAX_IMAGE_SIZE = 1024 * 800  # 800 KB
 RESIZE_PERCENTAGE = 20
@@ -27,7 +27,8 @@ def _resize_image(image: Image.Image, image_size: int) -> Image.Image:
     if image_size > MAX_IMAGE_SIZE:
         logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
         logging.debug(
-            f"Original image dimensions: {image.width}x{image.height}, size: {image_size} bytes"
+            f"Original image dimensions: {image.width}x{image.height}, "
+            f"size: {image_size} bytes"
         )
 
         new_width = image.width * RESIZE_PERCENTAGE // 100
@@ -49,7 +50,8 @@ def _insert_image_to_pdf(image: Image.Image, merged_pdf: fitz.Document) -> None:
 
     logging.info("Inserting image as PDF page.")
     logging.debug(
-        f"Image dimensions: {image.width}x{image.height}, size: {len(image_bytes)} bytes"
+        f"Image dimensions: {image.width}x{image.height}, "
+        f"size: {len(image_bytes)} bytes"
     )
 
     page = merged_pdf.new_page(width=rect.width, height=rect.height)
