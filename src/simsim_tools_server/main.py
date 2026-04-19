@@ -1,11 +1,12 @@
-from dotenv import load_dotenv
 import os
+
+import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .api.router import api_router, api_v1_router
 from .core.logging import setup_logging
-import uvicorn
-
 
 env = os.getenv("ENV", "development")
 load_dotenv(".env.production" if env == "production" else ".env")
