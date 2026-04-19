@@ -9,8 +9,12 @@ merge:
     set -euo pipefail
     branch=$(git branch --show-current)
     pr_data=$(gh pr view --json number,baseRefName 2>/dev/null) || { echo "No PR found for branch '$branch'"; exit 1; }
-    base=$(echo "$pr_data" | jq -r '.baseRefName')
-    gh pr merge --merge --delete-branch
-    git checkout "$base"
+    git fetch origin "$branch"
+    local_sha=$(git rev-parse HEAD)
+    remote_sha=$(git rev-parse "origin/$branch")
+    if [ "$local_sha" != "$remote_sha" ]; then
+        echo "Branch is not up to date, pulling..."
+        git pull
+    fi
+    gh pr merge --merge --delete-branch --auto
     git pull
-    git branch -d "$branch"
