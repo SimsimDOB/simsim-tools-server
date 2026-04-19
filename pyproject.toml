@@ -28,7 +28,18 @@ main = "simsim_tools_server.main:main"
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"
 httpx = "^0.28.1"
+ruff = "^0.15.11"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"

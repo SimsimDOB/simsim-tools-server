@@ -1,11 +1,12 @@
-import fitz
-from PIL import Image
-import pytesseract
+import logging
 import re
 import traceback
 from io import BytesIO
-import logging
+
+import fitz
+import pytesseract
 from fastapi import UploadFile
+from PIL import Image
 
 
 def count_summonses(pdf: UploadFile) -> tuple[int, int, str]:
@@ -55,7 +56,8 @@ def count_summonses(pdf: UploadFile) -> tuple[int, int, str]:
                         summonses_str = __get_summonses_str(img)
 
             logging.info(
-                f"File {pdf.filename} - Count: {count}, Removed: {removed}, Pages: {pages}"
+                f"File {pdf.filename} - Count: {count}, Removed: {removed}, "
+                f"Pages: {pages}"
             )
             total_count += count
             pages_str = ", ".join(map(str, pages))

@@ -1,12 +1,13 @@
-from fastapi import UploadFile
-from pathlib import Path
-import fitz
 import logging
+import zipfile
 from enum import Enum
 from io import BytesIO
-import pillow_heif
-from PIL import Image, ImageOps
+from pathlib import Path
 
+import fitz
+import pillow_heif
+from fastapi import UploadFile
+from PIL import Image, ImageOps
 
 MAX_IMAGE_SIZE = 1024 * 800  # 800 KB
 RESIZE_PERCENTAGE = 20
@@ -19,13 +20,15 @@ class AllowedExtension(str, Enum):
     PNG = "png"
     HEIC = "heic"
     HEIF = "heif"
+    ZIP = "zip"
 
 
 def _resize_image(image: Image.Image, image_size: int) -> Image.Image:
     if image_size > MAX_IMAGE_SIZE:
         logging.info(f"Image size exceeds {MAX_IMAGE_SIZE} bytes, resizing.")
         logging.debug(
-            f"Original image dimensions: {image.width}x{image.height}, size: {image_size} bytes"
+            f"Original image dimensions: {image.width}x{image.height}, "
+            f"size: {image_size} bytes"
         )
 
         new_width = image.width * RESIZE_PERCENTAGE // 100
@@ -47,7 +50,8 @@ def _insert_image_to_pdf(image: Image.Image, merged_pdf: fitz.Document) -> None:
 
     logging.info("Inserting image as PDF page.")
     logging.debug(
-        f"Image dimensions: {image.width}x{image.height}, size: {len(image_bytes)} bytes"
+        f"Image dimensions: {image.width}x{image.height}, "
+        f"size: {len(image_bytes)} bytes"
     )
 
     page = merged_pdf.new_page(width=rect.width, height=rect.height)
@@ -69,6 +73,36 @@ def _merge_image(
     _insert_image_to_pdf(image, merged_pdf)
 
     image.close()
+
+
+def _merge_zip(
+    file_bytes: bytes, file_name: str | None, merged_pdf: fitz.Document
+) -> None:
+    logging.info(f"Merging ZIP file: {file_name}")
+
+    with zipfile.ZipFile(BytesIO(file_bytes)) as zf:
+        for entry in zf.infolist():
+            if entry.is_dir():
+                continue
+
+            entry_name = entry.filename
+            ext_str = Path(entry_name).suffix.lower().lstrip(".")
+
+            try:
+                ext = AllowedExtension(ext_str)
+            except ValueError:
+                logging.warning(f"Skipping unsupported file in ZIP: {entry_name}")
+                continue
+
+            logging.info(f"Processing ZIP entry: {entry_name}")
+            entry_bytes = zf.read(entry)
+
+            if ext == AllowedExtension.PDF:
+                _merge_pdf(entry_bytes, entry_name, merged_pdf)
+            elif ext == AllowedExtension.ZIP:
+                _merge_zip(entry_bytes, entry_name, merged_pdf)
+            else:
+                _merge_image(entry_bytes, entry_name, merged_pdf)
 
 
 def _merge_pdf(
@@ -111,6 +145,8 @@ async def merge_pdfs(files: list[UploadFile]) -> BytesIO:
 
             if ext == AllowedExtension.PDF:
                 _merge_pdf(file_bytes, file.filename, merged_pdf)
+            elif ext == AllowedExtension.ZIP:
+                _merge_zip(file_bytes, file.filename, merged_pdf)
             else:
                 _merge_image(file_bytes, file.filename, merged_pdf)
 
