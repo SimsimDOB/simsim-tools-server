@@ -794,6 +794,23 @@ Then, in the browser:
 3. Open the original Summonses Counter, drop the same file, and confirm it
    still behaves exactly as before — that page counts it as removed, which is
    the pre-existing behavior this feature deliberately leaves alone.
+4. Drop a multi-page document that has no legible `Page X of Y` footer. When
+   the footer is unreadable the loop scans forward to the next page matching
+   `[0-9].*summons` and counts whatever it finds there. Check both failure
+   directions: if a continuation page repeats the quantity, the old tool
+   over-counted by 1 and the new one over-counts by that page's printed N;
+   and if the OCR instead breaks the line between the digit and the word
+   (`"3\nsummonses"`), that page parses fine on its own but does not match
+   the forward-scan pattern, so it is silently skipped with no entry in
+   Removed Pages — watch for a missing page with no corresponding count.
+5. Drop a PDF that the OLD Summonses Counter counts successfully, and confirm
+   the new tool counts the same pages and moves none of them into Removed.
+   The new regex requires the digit to sit immediately next to the word
+   (only whitespace and at most one period between them), whereas the old
+   tool's first pattern matched a `1` anywhere earlier on the line. Forms
+   like `"1) summonses"` or `"case 1 abc summons"` were counted by the old
+   tool and are rejected by the new one — confirm none of your test file's
+   pages hit that gap, or note it if they do.
 
 - [ ] **Step 9: Commit**
 
@@ -827,3 +844,7 @@ endpoint.
   places each. A fix to a crop region or the skip-ahead logic must be applied
   twice, and nothing enforces it.
 - The page-walk loop remains untested; that needs real PDFs and tesseract.
+- If the manual verification pass (Step 8) shows OCR really does insert
+  punctuation between the digit and the word, widen `_QUANTITY` to
+  `(\d+)\s*[.,:;)\-]?\s*summons(?:es)?\b`. Conditional on that evidence —
+  do not make this change speculatively.

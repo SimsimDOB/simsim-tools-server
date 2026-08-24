@@ -7,6 +7,9 @@ from simsim_tools_server.services.multi_summonses_count_service import (
     count_multi_summonses,
 )
 
+# Twin file: endpoints/summonses_count.py. This handler is a deliberate
+# duplicate of it; apply any shared-logic fix to both files.
+
 router = APIRouter()
 
 

@@ -8,6 +8,10 @@ import pytesseract
 from fastapi import UploadFile
 from PIL import Image
 
+# Twin file: summonses_count_service.py. The page-walk loop and OCR helpers
+# below are duplicated from it on purpose; apply any shared-logic fix there
+# too.
+
 _MAX_QUANTITY = 99
 _QUANTITY = re.compile(r"(\d+)\s*\.?\s*summons(?:es)?\b", re.IGNORECASE)
 
@@ -15,16 +19,18 @@ _QUANTITY = re.compile(r"(\d+)\s*\.?\s*summons(?:es)?\b", re.IGNORECASE)
 def parse_summons_quantity(text: str) -> int | None:
     """Read the summons quantity from a page's OCR'd text.
 
-    Returns None when no quantity is legible, or when the value exceeds
-    _MAX_QUANTITY. OCR joining two numbers is the realistic failure mode
-    here, and it would otherwise be invisible in a bare total.
+    Returns None when no quantity is legible, when the value is below 1, or
+    when it exceeds _MAX_QUANTITY. OCR joining two numbers is the realistic
+    failure mode for the upper bound, and it would otherwise be invisible in
+    a bare total; a value below 1 is equally implausible and must not be
+    silently treated as a counted page.
     """
     match = _QUANTITY.search(text)
     if match is None:
         return None
     quantity = int(match.group(1))
-    if quantity > _MAX_QUANTITY:
-        logging.warning(f"Implausible summons quantity {quantity} in {text!r}")
+    if quantity < 1 or quantity > _MAX_QUANTITY:
+        logging.warning(f"Implausible summons quantity {quantity} in {text[:80]!r}")
         return None
     return quantity
 
@@ -53,7 +59,7 @@ def count_multi_summonses(pdf: UploadFile) -> tuple[int, int, str]:
                 else:
                     logging.warning(
                         f"Removing page {images_index + 1}; no legible "
-                        f"quantity in {summonses_str!r}"
+                        f"quantity in {summonses_str[:80]!r}"
                     )
                     pages.append(images_index + 1)
                     removed += 1

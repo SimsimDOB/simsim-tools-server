@@ -11,6 +11,7 @@ from simsim_tools_server.services.multi_summonses_count_service import (
         # Singular and plural, with and without the OCR'd period.
         ("1 summons\n", 1),
         ("1. summonses\n", 1),
+        ("1. summons\n", 1),
         ("3 summonses\n", 3),
         ("12 summonses", 12),
         # OCR sometimes eats the space between the digit and the word.
@@ -24,6 +25,8 @@ from simsim_tools_server.services.multi_summonses_count_service import (
         ("3 sumnonses", None),
         # Implausible value, most likely two numbers joined by OCR.
         ("400 summonses", None),
+        # Zero is not a plausible summons quantity either.
+        ("0 summonses\n", None),
     ],
 )
 def test_parse_summons_quantity(text: str, expected: int | None):
