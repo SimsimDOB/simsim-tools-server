@@ -81,7 +81,7 @@ change is in the per-page branch:
 
 ```python
 _MAX_QUANTITY = 99
-_QUANTITY = re.compile(r"(\d+)\s*\.?\s*summons(?:es)?\b", re.IGNORECASE)
+_QUANTITY = re.compile(r"(\d+)\D*summons(?:es)?\b", re.IGNORECASE)
 
 
 def parse_summons_quantity(text: str) -> int | None:
@@ -105,6 +105,12 @@ The loop then does `count += quantity` where the original did `count += 1`.
 A `None` result takes the `else` branch: the page is recorded in
 `removed_pages` and logged at WARNING with the raw OCR string, so a systematic
 OCR failure is visible rather than silent.
+
+Any run of non-digits may separate the number from the word — real OCR
+yields list markers, brackets and colons (`'i. (2: summonses)'`) and
+sometimes a line break. `\D` never crosses another digit, so the nearest
+preceding number wins. This matches the permissiveness of the forward-scan
+pattern the page-walk loop already uses (`[0-9].*summons`).
 
 The `\b` anchor also removes the original's dependence on a trailing
 character, so text ending exactly at `"2 summons"` now parses.

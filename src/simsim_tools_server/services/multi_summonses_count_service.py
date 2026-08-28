@@ -13,7 +13,11 @@ from PIL import Image
 # too.
 
 _MAX_QUANTITY = 99
-_QUANTITY = re.compile(r"(\d+)\s*\.?\s*summons(?:es)?\b", re.IGNORECASE)
+# Any run of non-digits may sit between the number and the word: OCR yields
+# list markers, brackets and colons ("i. (2: summonses)"), and sometimes a
+# line break. \D never crosses another digit, so the nearest preceding number
+# wins. This mirrors the forward-scan pattern the page-walk loop already uses.
+_QUANTITY = re.compile(r"(\d+)\D*summons(?:es)?\b", re.IGNORECASE)
 
 
 def parse_summons_quantity(text: str) -> int | None:

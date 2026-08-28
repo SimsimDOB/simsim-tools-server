@@ -27,6 +27,16 @@ from simsim_tools_server.services.multi_summonses_count_service import (
         ("400 summonses", None),
         # Zero is not a plausible summons quantity either.
         ("0 summonses\n", None),
+        # Real OCR output: any run of non-digits may sit between the number
+        # and the word — list markers, brackets, colons, stray letters.
+        ("i. (2: summonses)\n\nings,\n", 2),
+        ("(3: summonses)", 3),
+        ("1) summonses", 1),
+        ("2 - summonses", 2),
+        # OCR may also break the line between the number and the word.
+        ("3\nsummonses\n", 3),
+        # The nearest preceding number wins; a digit is never skipped over.
+        ("case 7\n2 summonses\n", 2),
     ],
 )
 def test_parse_summons_quantity(text: str, expected: int | None):

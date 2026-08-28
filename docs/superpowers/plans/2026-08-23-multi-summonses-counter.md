@@ -164,7 +164,7 @@ import logging
 import re
 
 _MAX_QUANTITY = 99
-_QUANTITY = re.compile(r"(\d+)\s*\.?\s*summons(?:es)?\b", re.IGNORECASE)
+_QUANTITY = re.compile(r"(\d+)\D*summons(?:es)?\b", re.IGNORECASE)
 
 
 def parse_summons_quantity(text: str) -> int | None:
@@ -844,7 +844,14 @@ endpoint.
   places each. A fix to a crop region or the skip-ahead logic must be applied
   twice, and nothing enforces it.
 - The page-walk loop remains untested; that needs real PDFs and tesseract.
-- If the manual verification pass (Step 8) shows OCR really does insert
-  punctuation between the digit and the word, widen `_QUANTITY` to
-  `(\d+)\s*[.,:;)\-]?\s*summons(?:es)?\b`. Conditional on that evidence —
-  do not make this change speculatively.
+- RESOLVED: the manual pass produced the evidence this was gated on. A real
+  page OCR'd as `'i. (2: summonses)\n\nings,\n'` and was rejected, so
+  `_QUANTITY` was widened to `(\d+)\D*summons(?:es)?\b` — any run of
+  non-digits may separate the number from the word.
+- Residual risk from that widening: `\D` crosses newlines, so a number on a
+  nearby line can attach to a later `summonses` that has no number of its own
+  (`'Page 2 of 5\n\nsummonses'` parses as 5). It cannot cross another digit,
+  so the nearest preceding number always wins, and the ceiling of 99 filters
+  absurd captures. If a real page is ever miscounted this way, the tighter
+  pattern is `(\d+)[^\d\n]*\n?[^\d\n]*summons(?:es)?\b`, which allows at
+  most one line break inside the gap.
