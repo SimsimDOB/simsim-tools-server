@@ -104,7 +104,7 @@ def __get_skip_pages(img: Image.Image) -> int | None:
     pages_str = pytesseract.image_to_string(pages_img, lang="eng").lower()
     pages = re.search(r"[0-9].*of.*[0-9]", pages_str)
     if pages:
-        cur_page, total_page = pages.group().split(" of ")
+        cur_page, total_page = re.split(r"\s*of\s*", pages.group(), maxsplit=1)
         cur_page = re.sub(r"[^0-9]", "", cur_page)
         total_page = re.sub(r"[^0-9]", "", total_page)
         return int(total_page) - int(cur_page)
