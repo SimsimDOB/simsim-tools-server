@@ -20,5 +20,14 @@ merge:
         echo "Branch is not up to date, pulling..."
         git pull
     fi
-    gh pr merge --merge --delete-branch --auto
-    git pull
+    number=$(echo "$pr_data" | jq -r .number)
+    # Wait for CI. A PR with no checks makes `gh pr checks` fail, which is fine here.
+    if ! gh pr checks "$number" --watch --fail-fast; then
+        checks=$(gh pr checks "$number" 2>&1) || true
+        [[ "$checks" == *"no checks reported"* ]] || exit 1
+    fi
+    # Squash so the PR title becomes the commit on main. No --delete-branch: it
+    # checks out main locally, which fails while the root repo has main checked out.
+    gh pr merge "$number" --squash
+    git push origin --delete "$branch"
+    echo "Merged. Clean up with: just rm <repo> $branch"
