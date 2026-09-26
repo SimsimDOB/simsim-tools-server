@@ -17,6 +17,7 @@ class AllowedExtension(str, Enum):
     PDF = "pdf"
     JPG = "jpg"
     JPEG = "jpeg"
+    JFIF = "jfif"
     PNG = "png"
     HEIC = "heic"
     HEIF = "heif"
