@@ -1,13 +1,17 @@
 import datetime as dt
+from pathlib import Path
 
 import pytest
 
 from simsim_tools_server.services.summonses_updater_service import (
+    LookupResult,
     RowDecision,
+    SessionLostError,
     decide_row,
     is_valid_number,
     map_result,
     normalize_number,
+    parse_result_page,
 )
 
 D = dt.datetime(2024, 7, 31)
@@ -94,3 +98,21 @@ def test_decide_row(number, date, result, expected):
 )
 def test_map_result(status, hearing, expected):
     assert map_result(status, hearing) == expected
+
+
+FIXTURES = Path(__file__).parent.parent / "fixtures"
+
+
+def test_parse_found_page():
+    html = (FIXTURES / "ecb_found.html").read_text()
+    assert parse_result_page(html) == LookupResult(True, "RESCHEDULED", "DEFAULTED")
+
+
+def test_parse_no_record_page():
+    html = (FIXTURES / "ecb_no_record.html").read_text()
+    assert parse_result_page(html) == LookupResult(False, "", "")
+
+
+def test_parse_page_without_table_raises():
+    with pytest.raises(SessionLostError):
+        parse_result_page((FIXTURES / "ecb_no_table.html").read_text())

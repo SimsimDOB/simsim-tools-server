@@ -3,7 +3,10 @@
 import datetime as dt
 from dataclasses import dataclass
 
+from bs4 import BeautifulSoup
+
 MIN_YEAR = 2021
+NO_RECORD = "No Record Available"
 
 # Column Q values that mean "not decided yet": these rows get looked up.
 CANDIDATE_RESULTS = frozenset(
@@ -65,3 +68,29 @@ def map_result(status: str, hearing_result: str) -> str | None:
     if status == "RESCHEDULED":
         return "Adjourned"
     return None
+
+
+class SessionLostError(Exception):
+    """The ECB site answered without a result table (session expired)."""
+
+
+@dataclass(frozen=True)
+class LookupResult:
+    found: bool
+    status: str
+    hearing_result: str
+
+
+def parse_result_page(html: str) -> LookupResult:
+    """Read the ECB result page the way the original script did."""
+    soup = BeautifulSoup(html, "html.parser")
+    content = soup.select_one('table[id="vioContent"]')
+    if content is None:
+        raise SessionLostError("no vioContent table in response")
+    summons_number = content.select("td")[1].get_text().strip()
+    if summons_number == NO_RECORD:
+        return LookupResult(False, "", "")
+    details = soup.select_one('div[id="moreDetails"]').select("td")
+    status = details[1].get_text().strip()
+    hearing_result = details[3].get_text().strip()
+    return LookupResult(True, status, hearing_result)
