@@ -1,16 +1,34 @@
 """Summonses Updater: ECB ticket-finder lookups over an AVPS workbook."""
 
 import datetime as dt
-from dataclasses import dataclass
+import logging
+import threading
+import time
+import traceback
+from collections.abc import Callable
+from dataclasses import asdict, dataclass, field
+from io import BytesIO
 
 import httpx
 from bs4 import BeautifulSoup
+from openpyxl import Workbook, load_workbook
+from openpyxl.worksheet.worksheet import Worksheet
 
 MIN_YEAR = 2021
 NO_RECORD = "No Record Available"
 
 ECB_SEARCH_URL = "http://a820-ecbticketfinder.nyc.gov/searchHome.action"
 ECB_LOOKUP_URL = "http://a820-ecbticketfinder.nyc.gov/getViolationbyID.action"
+
+PAUSE_SECONDS = 3.0
+MAX_CONSECUTIVE_ERRORS = 5
+MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+SITE_DOWN_MESSAGE = "The ECB site is not responding"
+
+# Fixed columns of the AVPS sheet: B, G, Q.
+NUMBER_COL = 2
+DATE_COL = 7
+RESULT_COL = 17
 
 # Column Q values that mean "not decided yet": these rows get looked up.
 CANDIDATE_RESULTS = frozenset(
@@ -134,3 +152,213 @@ class EcbClient:
 
     def close(self) -> None:
         self._client.close()
+
+
+def check_headers(sheet: Worksheet) -> None:
+    b = sheet.cell(1, NUMBER_COL).value
+    g = sheet.cell(1, DATE_COL).value
+    q = sheet.cell(1, RESULT_COL).value
+    if (
+        "number" not in str(b).lower()
+        or "date" not in str(g).lower()
+        or "result" not in str(q).lower()
+    ):
+        raise ValueError(
+            f"Unexpected headers: B1={b!r}, G1={g!r}, Q1={q!r}. Expected the "
+            "summons Number, Date of Offense and Results of Hearing columns."
+        )
+
+
+def load_workbook_bytes(data: bytes) -> tuple[Workbook, Worksheet]:
+    try:
+        workbook = load_workbook(BytesIO(data))
+    except Exception as e:
+        raise ValueError("Could not read the workbook") from e
+    sheet = workbook.active
+    check_headers(sheet)
+    return workbook, sheet
+
+
+@dataclass
+class LogEntry:
+    i: int
+    row: int
+    number: str
+    kind: str
+    text: str
+
+
+@dataclass
+class Change:
+    row: int
+    number: str
+    before: str | None
+    after: str
+
+
+@dataclass
+class Problem:
+    row: int
+    reason: str
+
+
+def _new_counts() -> dict[str, int]:
+    return {"looked_up": 0, "changed": 0, "no_record": 0, "skipped": 0, "errors": 0}
+
+
+@dataclass
+class Job:
+    id: str
+    filename: str
+    workbook: Workbook
+    sheet: Worksheet
+    total_rows: int
+    status: str = "running"
+    current_row: int = 1
+    counts: dict[str, int] = field(default_factory=_new_counts)
+    log: list[LogEntry] = field(default_factory=list)
+    changes: list[Change] = field(default_factory=list)
+    problems: list[Problem] = field(default_factory=list)
+    error: str | None = None
+    started_at: dt.datetime = field(default_factory=lambda: dt.datetime.now(dt.UTC))
+    finished_at: dt.datetime | None = None
+    cancel_requested: bool = False
+    file_bytes: bytes | None = None
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def request_cancel(self) -> None:
+        self.cancel_requested = True
+
+    def snapshot(self, after: int = 0) -> dict:
+        with self.lock:
+            return {
+                "status": self.status,
+                "current_row": self.current_row,
+                "total_rows": self.total_rows,
+                "counts": dict(self.counts),
+                "started_at": self.started_at.isoformat(),
+                "finished_at": (
+                    self.finished_at.isoformat() if self.finished_at else None
+                ),
+                "error": self.error,
+                "log": [asdict(e) for e in self.log[max(after, 0) :]],
+                "next": len(self.log),
+                "changes": [asdict(c) for c in self.changes],
+                "problems": [asdict(p) for p in self.problems],
+            }
+
+    def _append(self, row: int, number: str, kind: str, text: str) -> None:
+        with self.lock:
+            self.log.append(LogEntry(len(self.log), row, number, kind, text))
+
+    def _finish(self, status: str, error: str | None = None) -> None:
+        with self.lock:
+            self.status = status
+            self.error = error
+            self.finished_at = dt.datetime.now(dt.UTC)
+            if status in ("done", "cancelled"):
+                buffer = BytesIO()
+                self.workbook.save(buffer)
+                self.file_bytes = buffer.getvalue()
+
+
+def run_job(
+    job: Job,
+    lookup: Callable[[str], LookupResult],
+    *,
+    pause: float | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Walk every data row of the sheet; always leaves the job terminal."""
+    if pause is None:
+        pause = PAUSE_SECONDS
+    try:
+        _walk_rows(job, lookup, pause, sleep)
+    except Exception as e:
+        logging.error(f"Summonses job {job.id} crashed: {e}\n{traceback.format_exc()}")
+        job._finish("failed", str(e))
+
+
+def _walk_rows(
+    job: Job,
+    lookup: Callable[[str], LookupResult],
+    pause: float,
+    sleep: Callable[[float], None],
+) -> None:
+    sheet = job.sheet
+    consecutive_errors = 0
+    for row in range(2, sheet.max_row + 1):
+        with job.lock:
+            job.current_row = row
+        decision = decide_row(
+            sheet.cell(row, NUMBER_COL).value,
+            sheet.cell(row, DATE_COL).value,
+            sheet.cell(row, RESULT_COL).value,
+        )
+        number = decision.number
+        if decision.skip is not None:
+            _skip_row(job, row, number, decision.skip)
+        else:
+            try:
+                result = lookup(number)
+            except Exception as e:
+                consecutive_errors += 1
+                logging.error(
+                    f"Lookup failed for row {row} ({number}): {e}\n"
+                    f"{traceback.format_exc()}"
+                )
+                with job.lock:
+                    job.counts["errors"] += 1
+                job._append(row, number, "error", f"error: {e}")
+                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                    job._finish("failed", SITE_DOWN_MESSAGE)
+                    return
+            else:
+                consecutive_errors = 0
+                _apply_result(job, row, number, result)
+            sleep(pause)
+        if job.cancel_requested:
+            job._finish("cancelled")
+            return
+    job._finish("done")
+
+
+def _skip_row(job: Job, row: int, number: str, reason: str) -> None:
+    with job.lock:
+        job.counts["skipped"] += 1
+    if reason == "bad date":
+        job.problems.append(Problem(row, reason))
+        job._append(row, number, "bad_date", f"skipped ({reason})")
+    elif reason == "invalid number":
+        logging.warning(f"Row {row}: invalid summons number {number!r}")
+        job.problems.append(Problem(row, reason))
+        job._append(row, number, "invalid", f"skipped ({reason})")
+    else:
+        job._append(row, number, "skipped", f"skipped ({reason})")
+
+
+def _apply_result(job: Job, row: int, number: str, result: LookupResult) -> None:
+    cell = job.sheet.cell(row, RESULT_COL)
+    with job.lock:
+        job.counts["looked_up"] += 1
+    if not result.found:
+        cell.value = NO_RECORD
+        with job.lock:
+            job.counts["no_record"] += 1
+        job._append(row, number, "no_record", NO_RECORD)
+        return
+    after = map_result(result.status, result.hearing_result)
+    if after is None:
+        job._append(row, number, "same", f"left unchanged ({result.status})")
+        return
+    before = cell.value
+    cell.value = after
+    if before != after:
+        with job.lock:
+            job.counts["changed"] += 1
+            job.changes.append(Change(row, number, before, after))
+        job._append(
+            row, number, "changed", f"{before or '(blank)'} → {after} (changed)"
+        )
+    else:
+        job._append(row, number, "same", f"{after} (same)")
