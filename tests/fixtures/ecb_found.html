@@ -1,0 +1,368 @@
+<!-- Captured from the ECB ticket finder on 2026-11-04 and scrubbed: names, addresses and the summons number are placeholders. -->
+
+
+
+        
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+	<title>NYC Office of Administrative Trials and Hearings</title>
+	<link href='css/etf.css' rel="stylesheet" type="text/css" />
+	<link href='css/tabs.css' rel="stylesheet" type="text/css" />
+	<link href='css/styles.css' rel="stylesheet" type="text/css" />
+	<link href='css/jquery/themes/custom-theme/jquery-ui.css' rel="stylesheet" type="text/css" />
+
+	<script type="text/javascript" src="js/jquery/jquery-3.7.1.js"></script>
+    <script type="text/javascript" src="js/jquery/ui/jquery-ui.js"></script>
+	<script type="text/javascript" src="js/base.js"></script>
+	<script type="text/javascript">
+	
+    
+		function showFields(id) {
+			
+			$(".tab_item_").each(function(index) {
+			    if(this.id == id) {
+			    	$(this).removeClass("tab_item_ deselect_").addClass("tab_item_ selected_");
+			    } else {
+			    	$(this).removeClass("tab_item_ selected_").addClass("tab_item_ deselect_");
+			    }
+			});	
+			$("#vTable tr").each(function (event, index)
+			{
+				var elementId = this.id;	
+				if(elementId.indexOf(id) != -1) {
+					this.style.display = "block";
+				} else {
+					this.style.display = "none";
+				}
+			});
+			hideErrorDiv();
+			$("#searchAccordion").accordion();
+			$("#searchAccordion").accordion("refresh");
+			    
+			if(id == "1_"){
+				
+				document.getElementById("searchType").value = "violationNumber";
+				document.forms[0].action="getViolationbyID.action";
+			}else if(id == "2_"){
+				//alert(id);
+				$("#searchType").val("nameSearch");
+				document.forms[0].action="search.action";
+			}else if(id == "3_"){
+			
+				$("#searchType").val("addressSearch");
+				document.forms[0].action="search.action";
+			}else if(id == "4_"){
+				//alert(id);
+				$("#searchType").val("nameAddressSearch");
+				document.forms[0].action="search.action";
+			}
+			
+		}
+		
+	</script> 
+</head>
+<body>
+	
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
+<table width="769" border="0" cellspacing="0" cellpadding="0"">
+	<tr> 
+		<td>
+			<img src="./images/agency_banner.jpg" alt="" border="0" usemap="#TopNav">
+		</td>
+	</tr>
+</table>
+
+		<!-- changes are working OK but while displaying Result page Tope Block text 'Envi.. Control Board' a line is coming.. -->
+		<!--  div style="padding:0px;width:769px;float:left;" -->
+			
+
+<script type='text/javascript'>
+$(document).ready(function () {
+	$("#VioDetailsAccordion").accordion();
+	//$("#vioContentHistAccordion").accordion();
+	$("#vioMoreAccordion").accordion();
+	$("#vioInfrAccordion").accordion();
+	//var icons = $( "#vioInfrAccordion" ).accordion( "option", "icons" );
+	//$( "#vioInfrAccordion" ).accordion( "option", "icons", { 'header': 'ui-icon-plus', 'headerSelected': 'ui-icon-minus' } );
+//	document.getElementById('history').style.display='none';
+	document.getElementById('moreDetails').style.display='none';
+	document.getElementById('infraDetails').style.display='none';
+});
+
+function showMoreDetail(divID) {
+	var item = document.getElementById(divID);
+//	var historyitem = document.getElementById('history');
+	
+	if (item) {
+	//	item.style.display=(item.style.display=='block')?'none':'block';
+		if (item.style.display=='block'){
+			item.style.display='none';
+		}else {
+			item.style.display='block';	
+		}
+		
+//		historyitem.style.display='none';
+		infraDetails.style.display='none';
+	}
+ }
+function showMoreHistory(divID) {
+	var item = document.getElementById(divID);
+	var moreitem = document.getElementById('moreDetails');
+	if (item) {
+		//item.style.display=(item.style.display=='block')?'none':'block';
+		item.style.display='block';
+		moreitem.style.display='none';
+		infraDetails.style.display='none';
+	}
+ }
+function showInfraDetail(divID){
+	var item = document.getElementById(divID);
+	var moreitem = document.getElementById('moreDetails');
+//	var historyitem = document.getElementById('history');
+	
+	if (item) {
+		//item.style.display=(item.style.display=='block')?'none':'block';
+		if (item.style.display=='block'){
+			item.style.display='none';
+		}else {
+			item.style.display='block';	
+		}
+		
+		moreitem.style.display='none';
+	//	historyitem.style.display='none';
+	}
+
+}
+
+
+
+function newSearch(){
+	document.forms[0].action="searchHome.action";
+	document.forms[0].submit();
+	
+}
+function goBack(){
+	document.forms[0].action="getPage.action";
+	document.forms[0].submit();
+}
+</script>
+
+<h2>Summonses and Notices with ECB Hearings at OATH</h2>
+
+ 	<div id="VioDetailsAccordion" style="width:769px;">
+		<h2><a href="#">Case Details</a></h2>
+		<div>
+  	    <table class="bordertablebotm fullwide" cellspacing="0" id="vioContent">
+	 		<tr>
+				<td scope="row" class="emph">Summons/Notice Number:	</td>
+				<td>0000000000</td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Date Issued:</td>
+				<td>07/31/2024</td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Issuing Agency:</td> 
+				<td>DEPT OF BUILDINGS                                                                                                                                     </td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Respondent Name:</td>
+				<td>RESPONDENT NAME</td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Balance Due:</td>
+								
+				<td>
+					$0.00
+					
+					
+					&nbsp;&nbsp;&nbsp;&nbsp;		
+						<input type="button" class="button_linklike" value="How To Pay" onclick='openHelpBalanceDue("https://www.nyc.gov/site/oath/hearings/payments-penalties.page");'>
+					
+						
+				</td>
+				
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Inspection Location:</td>
+				<td>1 MAIN STREET NEW YORK NY 10001</td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Respondent Address:</td>
+				<td>1 MAIN STREET NEW YORK NY 10001</td>
+			</tr>
+			<tr>
+			<td scope="row" class="emph">
+			<input type="button" class="button_linklike" value='View Image of Summons/Notice' onclick='ViolationImagePopup("0000000000");'>
+			</td>
+			
+			
+		</tr>
+			
+	</table>
+	</div>
+</div>
+
+
+<div id="vioMoreAccordion" style="width:769px;" >
+
+	<h2><a href="#" onclick="showMoreDetail('moreDetails')" >More Details	</a></h2>
+
+	<div id="moreDetails">
+	 	<table class="bordertablebotm fullwide" cellspacing="0" id="details">
+	 		<tr>
+				<td scope="row" class="emph">Status of Summons/Notice:	</td>
+				<td>
+				RESCHEDULED 
+				
+			</tr>
+			
+			<tr>
+			
+				<td scope="row" class="emph">Hearing Result:	</td>
+				<td>DEFAULTED </td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Hearing Location:	</td>
+				<td>
+					
+						&nbsp;&nbsp;
+								<input type="button" class="button_linklike" value="Hearing Locations" onclick='openHelp("https://www.nyc.gov/site/oath/hearings/hearing-in-person.page");'>
+				</td>
+			</tr>
+			<tr>
+				<td scope="row" class="emph">Hearing Date:	</td>
+				<td class="widthpct-60">
+					07/27/2027
+						
+								&nbsp;&nbsp;&nbsp;&nbsp;
+									<input type="button" class="button_linklike" value="One Click" onclick='openHelpBrowser("https://www.nyc.gov/site/oath/hearings/online-hearing-submission.page");'>	
+								&nbsp;&nbsp;
+								<input type="button" class="button_linklike" value="Hearings by Telephone" onclick='openHelp("https://www.nyc.gov/site/oath/hearings/hearing-by-phone.page");'>		
+							&nbsp;&nbsp;
+								<input type="button" class="button_linklike" value="How To Pay" onclick='openHelpBalanceDue("https://www.nyc.gov/site/oath/hearings/payments-penalties.page");'>
+						    
+			</tr>
+		</table>
+	</div>
+</div>
+<!-- <div id="vioContentHistAccordion" style="width:769px;" onclick="showMoreHistory('history')">
+	<h2><a href="#">Violation History</a></h2>
+
+	<div  id="history">
+			<table class="bordertablebotm" width="100%" cellspacing="0" id="vioContentHist" >
+					<thead>
+		   			<tr> 
+						<th scope="col" class="alignleft">
+								Event Type
+						</th>
+						<th scope="col" class="alignleft">
+							Event Added Date
+						</th>
+						<th scope="col" class="alignleft">
+							Agency
+						</th>	
+							<th scope="col" class="alignleft">
+							Record Date
+						</th>
+						<th scope="col" class="alignleft">
+							Amount Due
+						</th>
+						<th scope="col" class="alignleft">
+								Balance Due
+						</th>
+						<th scope="col" class="aligncenter">
+							Remarks
+						</th>
+				   </tr>
+		   	</thead> 
+		     
+		</table>
+	
+	</div>
+</div>	
+ -->
+
+<div id="vioInfrAccordion" style="width:769px;" >
+
+  <h2><a href="#infraDetails" onclick="showInfraDetail('infraDetails')" >Explanation of Charges</a></h2>  	
+
+	<div id="infraDetails">
+	 <table class="bordertablebotm fullwide" cellspacing="0" id="details">
+	 <tr>
+				<th scope="col" class="alignleft">Code</th>
+				<th scope="col" class="alignleft">Code Section</th>
+				<th>Description</th>
+				<th scope="col" class="alignleft">Face Amount</th>
+				<!-- th>Stip Amount</th -->
+			</tr>
+	 
+		 <tr  class="altrow" >
+	 		<tr>
+				<td>A190</td>
+				<td>28-408&nbsp;.1</td>
+				<!-- td></td -->
+				<td >PERFORMING PLUMBING WORK WITHOUT A MASTER PLUMBER LICENSE</td>
+								
+				<td >$0.00</td>
+								
+				<!-- td >0.00</td -->
+
+			</tr>
+			
+	
+	</table>
+	</div>
+</div>
+
+
+<form name="buttonFrm">
+	<table>
+		<tr>
+			<td><input type="button" name="backtoSearch" value="New Search" onclick="newSearch();"></td>
+  
+		</tr>
+		<tr><td>&nbsp;&nbsp;</td></tr>
+	</table>
+</form>
+
+		<!-- /div -->		
+		
+	
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<style type="text/css">
+<!--
+	.footer_links {font-family: Verdana, Arial, Helvetica, sans-serif;
+		font-size: 10px;
+		color: #F9D053;
+	}
+
+	.footer_copyright {font-family: Verdana, Arial, Helvetica, sans-serif;
+		font-size: 10px;
+		color: #C4C4B2;
+	}
+-->
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Insert title here</title>
+</head>
+<body>
+<TABLE cellSpacing=0 cellPadding=0 width=769 bgColor=#494B4C border=0>
+	<TBODY>
+	<TR><TD width=13 height=24 ></TD>
+          <TD width=287><SPAN class=footer_copyright>Copyright 2011 The City of New York</SPAN></TD>
+          <TD align=right width=444><SPAN class=footer_links><A class=footer_links href="http://www.nyc.gov/contact">Contact Us</A> | <A class=footer_links href="http://www.nyc.gov/faqs">FAQs</A> | <A class=footer_links href="http://www.nyc.gov/privacy">Privacy Statement</A> | <A class=footer_links href="http://www.nyc.gov/html/misc/html/tou.html">Terms of Use</A> | <A class=footer_links href="http://www.nyc.gov/sitemap">Site Map</A></SPAN></TD>
+          <TD align=right width=25></TD></TR>
+        </TBODY>
+</TABLE>
+</body>
+</html>
+		 
+</body>
+</html>
