@@ -3,10 +3,14 @@
 import datetime as dt
 from dataclasses import dataclass
 
+import httpx
 from bs4 import BeautifulSoup
 
 MIN_YEAR = 2021
 NO_RECORD = "No Record Available"
+
+ECB_SEARCH_URL = "http://a820-ecbticketfinder.nyc.gov/searchHome.action"
+ECB_LOOKUP_URL = "http://a820-ecbticketfinder.nyc.gov/getViolationbyID.action"
 
 # Column Q values that mean "not decided yet": these rows get looked up.
 CANDIDATE_RESULTS = frozenset(
@@ -94,3 +98,39 @@ def parse_result_page(html: str) -> LookupResult:
     status = details[1].get_text().strip()
     hearing_result = details[3].get_text().strip()
     return LookupResult(True, status, hearing_result)
+
+
+class EcbClient:
+    """Cookie-session client for the ECB ticket finder."""
+
+    def __init__(self, client: httpx.Client | None = None) -> None:
+        self._client = client or httpx.Client(
+            timeout=30,
+            follow_redirects=True,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+
+    def start_session(self) -> None:
+        self._client.get(ECB_SEARCH_URL).raise_for_status()
+
+    def lookup(self, number: str) -> LookupResult:
+        try:
+            return self._lookup(number)
+        except SessionLostError:
+            self.start_session()
+            return self._lookup(number)
+
+    def _lookup(self, number: str) -> LookupResult:
+        response = self._client.post(
+            ECB_LOOKUP_URL,
+            data={
+                "searchViolationObject.violationNo": number,
+                "searchViolationObject.searchType": "violationNumber",
+                "submit": "  Search  ",
+            },
+        )
+        response.raise_for_status()
+        return parse_result_page(response.text)
+
+    def close(self) -> None:
+        self._client.close()

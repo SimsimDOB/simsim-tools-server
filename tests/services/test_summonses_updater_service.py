@@ -1,9 +1,13 @@
 import datetime as dt
 from pathlib import Path
 
+import httpx
 import pytest
 
 from simsim_tools_server.services.summonses_updater_service import (
+    ECB_LOOKUP_URL,
+    ECB_SEARCH_URL,
+    EcbClient,
     LookupResult,
     RowDecision,
     SessionLostError,
@@ -116,3 +120,53 @@ def test_parse_no_record_page():
 def test_parse_page_without_table_raises():
     with pytest.raises(SessionLostError):
         parse_result_page((FIXTURES / "ecb_no_table.html").read_text())
+
+
+def _ecb(handler):
+    return EcbClient(httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_lookup_posts_form_and_parses():
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        if str(request.url) == ECB_SEARCH_URL:
+            return httpx.Response(200, text="<html></html>")
+        return httpx.Response(200, text=(FIXTURES / "ecb_found.html").read_text())
+
+    ecb = _ecb(handler)
+    ecb.start_session()
+    assert ecb.lookup("0213681142") == LookupResult(True, "RESCHEDULED", "DEFAULTED")
+    post = seen[-1]
+    assert post.method == "POST"
+    assert str(post.url) == ECB_LOOKUP_URL
+    body = post.content.decode()
+    assert "searchViolationObject.violationNo=0213681142" in body
+    assert "searchViolationObject.searchType=violationNumber" in body
+
+
+def test_lookup_refreshes_session_once_on_lost_session():
+    calls = {"search": 0, "lookup": 0}
+
+    def handler(request):
+        if str(request.url) == ECB_SEARCH_URL:
+            calls["search"] += 1
+            return httpx.Response(200, text="")
+        calls["lookup"] += 1
+        name = "ecb_no_table.html" if calls["lookup"] == 1 else "ecb_no_record.html"
+        return httpx.Response(200, text=(FIXTURES / name).read_text())
+
+    ecb = _ecb(handler)
+    ecb.start_session()
+    assert ecb.lookup("0213681142") == LookupResult(False, "", "")
+    assert calls == {"search": 2, "lookup": 2}
+
+
+def test_lookup_gives_up_after_one_retry():
+    def handler(request):
+        return httpx.Response(200, text=(FIXTURES / "ecb_no_table.html").read_text())
+
+    ecb = _ecb(handler)
+    with pytest.raises(SessionLostError):
+        ecb.lookup("0213681142")
