@@ -6,6 +6,7 @@ from simsim_tools_server.services.summonses_updater_service import (
     RowDecision,
     decide_row,
     is_valid_number,
+    map_result,
     normalize_number,
 )
 
@@ -74,3 +75,22 @@ def test_is_valid_number(number, expected):
 )
 def test_decide_row(number, date, result, expected):
     assert decide_row(number, date, result) == expected
+
+
+@pytest.mark.parametrize(
+    ("status", "hearing", "expected"),
+    [
+        ("PAID IN FULL", "", "Paid before Hearing"),
+        ("PAID IN FULL", "DEFAULTED", "Paid before Hearing"),
+        ("RESCHEDULED", "DEFAULTED", "Defaulted"),
+        ("HEARING HELD", "SETTL/IN-VIOLATION", "In Violation"),
+        # str.capitalize() lowercases the rest; kept on purpose (spec).
+        ("HEARING HELD", "ADMIN. DISMISSAL", "Admin. dismissal"),
+        ("SETTL/IN-VIOLATION", "", "In Violation"),
+        ("NEW ISSUANCE", "", "New Issuance"),
+        ("RESCHEDULED", "", "Adjourned"),
+        ("HEARING SCHEDULED", "", None),
+    ],
+)
+def test_map_result(status, hearing, expected):
+    assert map_result(status, hearing) == expected

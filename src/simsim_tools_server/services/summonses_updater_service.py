@@ -48,3 +48,20 @@ def decide_row(number: object, date: object, result: object) -> RowDecision:
     if not is_valid_number(normalized):
         return RowDecision("invalid number", normalized)
     return RowDecision(None, normalized)
+
+
+def map_result(status: str, hearing_result: str) -> str | None:
+    """Value to write to column Q for a found record, or None to leave it."""
+    if status == "PAID IN FULL":
+        return "Paid before Hearing"
+    if hearing_result:
+        if hearing_result == "SETTL/IN-VIOLATION":
+            return "In Violation"
+        return hearing_result.capitalize()
+    if status == "SETTL/IN-VIOLATION":
+        return "In Violation"
+    if status == "NEW ISSUANCE":
+        return "New Issuance"
+    if status == "RESCHEDULED":
+        return "Adjourned"
+    return None
