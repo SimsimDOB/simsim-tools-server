@@ -1,8 +1,11 @@
+import asyncio
 import datetime as dt
+import inspect
 import threading
 import time
 from io import BytesIO
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from openpyxl import Workbook, load_workbook
@@ -211,3 +214,58 @@ def test_sweep_drops_old_finished_jobs(monkeypatch):
     monkeypatch.setattr(endpoint, "_jobs", {"old": old, "fresh": fresh, "run": running})
     endpoint._sweep(now)
     assert set(endpoint._jobs) == {"fresh", "run"}
+
+
+def test_download_non_ascii_filename(client: TestClient, fake):
+    job_id = _upload(client, _xlsx([]), name="AVPS – é 传票.xlsx").json()["job_id"]
+    assert _wait(client, job_id)["status"] == "done"
+    download = client.get(f"{URL}/{job_id}/file")
+    assert download.status_code == 200
+    disposition = download.headers["content-disposition"]
+    assert "filename*=UTF-8''AVPS%20%E2%80%93%20%C3%A9%20%E4%BC%A0%E7%A5%A8.xlsx" in (
+        disposition
+    )
+
+
+def test_poll_after_past_end_over_http(client: TestClient, fake):
+    # Review Focus 4, over HTTP.
+    job_id = _upload(client, _xlsx([("213681142", D, None)])).json()["job_id"]
+    _wait(client, job_id)
+    snap = client.get(f"{URL}/{job_id}", params={"after": 99}).json()
+    assert snap["log"] == []
+    assert snap["next"] == 1
+
+
+def test_start_session_failure_is_site_down(client: TestClient, fake):
+    def refuse(self):
+        raise httpx.ConnectError("[Errno 111] Connection refused")
+
+    fake.start_session = refuse
+    job_id = _upload(client, _xlsx([("213681142", D, None)])).json()["job_id"]
+    snap = _wait(client, job_id)
+    assert snap["status"] == "failed"
+    assert snap["error"] == svc.SITE_DOWN_MESSAGE
+
+
+def test_upload_parses_workbook_off_the_event_loop(
+    client: TestClient, fake, monkeypatch
+):
+    seen = {}
+    real = endpoint.load_workbook_bytes
+
+    def spy(data):
+        try:
+            asyncio.get_running_loop()
+            seen["on_loop"] = True
+        except RuntimeError:
+            seen["on_loop"] = False
+        return real(data)
+
+    monkeypatch.setattr(endpoint, "load_workbook_bytes", spy)
+    assert _upload(client, _xlsx([])).status_code == 202
+    assert seen["on_loop"] is False
+
+
+def test_status_endpoint_runs_in_threadpool():
+    # snapshot() takes a threading.Lock; a coroutine handler would block the loop.
+    assert not inspect.iscoroutinefunction(endpoint.summonses_update_status)

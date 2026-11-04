@@ -252,14 +252,18 @@ class Job:
             self.log.append(LogEntry(len(self.log), row, number, kind, text))
 
     def _finish(self, status: str, error: str | None = None) -> None:
+        # Save outside the lock (only the worker touches the workbook, and the
+        # save takes seconds), then publish status and bytes together.
+        file_bytes = None
+        if status in ("done", "cancelled"):
+            buffer = BytesIO()
+            self.workbook.save(buffer)
+            file_bytes = buffer.getvalue()
         with self.lock:
+            self.file_bytes = file_bytes
             self.status = status
             self.error = error
             self.finished_at = dt.datetime.now(dt.UTC)
-            if status in ("done", "cancelled"):
-                buffer = BytesIO()
-                self.workbook.save(buffer)
-                self.file_bytes = buffer.getvalue()
 
 
 def run_job(
@@ -327,6 +331,7 @@ def _skip_row(job: Job, row: int, number: str, reason: str) -> None:
     with job.lock:
         job.counts["skipped"] += 1
     if reason == "bad date":
+        logging.warning(f"Row {row}: unreadable date, skipped (bad date)")
         job.problems.append(Problem(row, reason))
         job._append(row, number, "bad_date", f"skipped ({reason})")
     elif reason == "invalid number":

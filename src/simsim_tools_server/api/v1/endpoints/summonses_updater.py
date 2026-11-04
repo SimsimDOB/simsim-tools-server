@@ -2,9 +2,13 @@ import datetime as dt
 import logging
 import secrets
 import threading
+import traceback
 from io import BytesIO
+from urllib.parse import quote
 
+import httpx
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 
 from simsim_tools_server.services import summonses_updater_service as svc
@@ -39,9 +43,18 @@ def _launch(job: Job) -> None:
         try:
             ecb.start_session()
             run_job(job, ecb.lookup)
+        except httpx.HTTPError as e:
+            logging.error(
+                f"Summonses job {job.id}: ECB site unreachable: {e!r}\n"
+                f"{traceback.format_exc()}"
+            )
+            job._finish("failed", svc.SITE_DOWN_MESSAGE)
         except Exception as e:
-            logging.error(f"Summonses job {job.id} could not start: {e}")
-            job._finish("failed", str(e))
+            logging.error(
+                f"Summonses job {job.id} could not start: {e!r}\n"
+                f"{traceback.format_exc()}"
+            )
+            job._finish("failed", str(e) or e.__class__.__name__)
         finally:
             ecb.close()
         logging.info(f"Summonses job {job.id} {job.status}: {job.counts}")
@@ -72,7 +85,8 @@ async def start_summonses_update(file: UploadFile = File(...)):
             detail="File is larger than 25 MB",
         )
     try:
-        workbook, sheet = load_workbook_bytes(data)
+        # Parsing a real workbook takes ~1 s; keep it off the event loop.
+        workbook, sheet = await run_in_threadpool(load_workbook_bytes, data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -97,26 +111,39 @@ async def start_summonses_update(file: UploadFile = File(...)):
     }
 
 
+# Plain `def`: snapshot() takes a threading.Lock, so run in the threadpool.
 @router.get("/summonses-updater/{job_id}")
-async def summonses_update_status(job_id: str, after: int = 0):
+def summonses_update_status(job_id: str, after: int = 0):
     return _get_job(job_id).snapshot(after)
 
 
 @router.get("/summonses-updater/{job_id}/file")
-async def summonses_update_file(job_id: str):
+def summonses_update_file(job_id: str):
     job = _get_job(job_id)
-    if job.status == "running":
+    with job.lock:
+        job_status, file_bytes = job.status, job.file_bytes
+    if job_status == "running":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Job is still running"
         )
-    if job.file_bytes is None:
+    if file_bytes is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No file for this job"
         )
     return StreamingResponse(
-        BytesIO(job.file_bytes),
+        BytesIO(file_bytes),
         media_type=XLSX_MEDIA_TYPE,
-        headers={"Content-Disposition": f'attachment; filename="{job.filename}"'},
+        headers={"Content-Disposition": _content_disposition(job.filename)},
+    )
+
+
+def _content_disposition(filename: str) -> str:
+    """ASCII fallback plus RFC 5987 UTF-8 name, so non-ASCII names download."""
+    ascii_name = filename.encode("ascii", "replace").decode("ascii")
+    ascii_name = ascii_name.replace('"', "'").replace("\\", "_")
+    return (
+        f'attachment; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{quote(filename, safe='')}"
     )
 
 

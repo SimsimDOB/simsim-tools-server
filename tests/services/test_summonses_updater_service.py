@@ -338,3 +338,27 @@ def test_snapshot_after_cursor():
     # Review Focus 4: a cursor past the end is harmless.
     assert job.snapshot(after=99)["log"] == []
     assert job.snapshot(after=99)["next"] == 2
+
+
+def test_finish_publishes_status_and_file_together():
+    """Nobody may observe status != running before file_bytes exists."""
+    job = _job([("213681142", D, "Defaulted")])
+    observed = {}
+    real_save = job.workbook.save
+
+    def spy_save(buffer):
+        observed["status_during_save"] = job.status
+        real_save(buffer)
+
+    job.workbook.save = spy_save
+    svc.run_job(job, lambda n: pytest.fail("no lookup"), pause=0, sleep=_no_sleep)
+    assert observed["status_during_save"] == "running"
+    assert job.status == "done"
+    assert job.file_bytes is not None
+
+
+def test_bad_date_row_is_logged_as_warning(caplog):
+    job = _job([("213681142", "2024-07-31", None)])
+    with caplog.at_level("WARNING"):
+        svc.run_job(job, lambda n: pytest.fail("no lookup"), pause=0, sleep=_no_sleep)
+    assert any("bad date" in r.message and "2" in r.message for r in caplog.records)
